@@ -42,15 +42,127 @@ Grid.prototype.randomAvailableCell = function () {
   }
 };
 
-// Returns the worst possible available tile
 Grid.prototype.worstAvailableTile = function () {
+  var badCells = this.mostBlockingCells();
+  var worstCell = this.highestNeighbourSumCell(badCells);
+  var value = this.worstValueForCell(worstCell);
+  return new Tile(worstCell, value);
+}
+
+Grid.prototype.mostBlockingCells = function () {
+  var bestCells = [];
+  var bestFullness = -1;
+
+  var useRows = true;
+
+  var checkRows = function() {
+    for (var i = 0; i < this.size; i++) {
+      // check i-th row
+      var numInRow = this.cellsInRow(i);
+      if (numInRow != this.size && numInRow > bestFullness) {
+        bestFullness = numInRow;
+        bestCells = this.emptyCellsInRow(i);
+      }
+    }
+  }
+
+  var checkColumns = function() {
+    for (var i = 0; i < this.size; i++) {
+      var numInCol = this.cellsInColumn(i);
+      if (numInCol != this.size && numInCol > bestFullness) {
+        bestFullness = numInCol;
+        bestCells = this.emptyCellsInColumn(i);
+      }
+    }
+  }
+
+  if (this.numFullRows() < this.numFullColumns()) {
+    checkColumns.apply(this);
+  } else {
+    checkRows.apply(this);
+  }
+
+  if (bestFullness == 0) {
+    bestCells = this.availableCells();
+  }
+
+  return bestCells;
+};
+
+Grid.prototype.cellsInRow = function (row) {
+  var numCells = 0;
+  for (var x = 0; x < this.size; x++) {
+    if (this.cells[x][row]) {
+      numCells++;
+    }
+  }
+
+  return numCells;
+}
+
+Grid.prototype.emptyCellsInRow = function (row) {
+  cells = [];
+  for (var x = 0; x < this.size; x++) {
+    if (this.cells[x][row] == null) {
+      cells.push({x: x, y: row});
+    }
+  }
+
+  return cells;
+}
+
+Grid.prototype.numFullRows = function() {
+  var count = 0;
+  for (var i = 0; i < this.size; i++) {
+    if (this.emptyCellsInRow(i) == this.size) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+Grid.prototype.cellsInColumn = function (col) {
+  var numCells = 0;
+  for (var y = 0; y < this.size; y++) {
+    if (this.cells[col][y]) {
+      numCells++;
+    }
+  }
+
+  return numCells;
+}
+
+Grid.prototype.emptyCellsInColumn = function (col) {
+  var cells = [];
+  for (var y = 0; y < this.size; y++) {
+    if (this.cells[col][y] == null) {
+      cells.push({x: col, y: y});
+    }
+  }
+
+  return cells;
+}
+
+Grid.prototype.numFullColumns = function() {
+  var count = 0;
+  for (var i = 0; i < this.size; i++) {
+    if (this.emptyCellsInColumn(i) == this.size) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+// Returns the worst possible available tile
+Grid.prototype.highestNeighbourSumCell = function (cells) {
   var highestNeigbourSum = -1;
   var bestCell = null;
 
-  var availableCells = this.availableCells();
 
-  for (var i = 0; i < availableCells.length; i++) {
-    var cell = availableCells[i];
+  for (var i = 0; i < cells.length; i++) {
+    var cell = cells[i];
     var neighbourSum = this.cellNeighbourSum(cell);
 
     if (neighbourSum > highestNeigbourSum) {
@@ -59,8 +171,7 @@ Grid.prototype.worstAvailableTile = function () {
     }
   }
 
-  var value = this.worstValueForCell(bestCell);
-  return new Tile(bestCell, value);
+  return bestCell;
 };
 
 Grid.prototype.cellNeighbourSum = function (cell) {
@@ -75,7 +186,7 @@ Grid.prototype.cellNeighbourSum = function (cell) {
   for (var i = 0; i < neighbours.length; i++) {
     var neighbourContent = this.cellContent(neighbours[i]);
     if (neighbourContent) {
-      sum += neighbourContent.value;
+      sum += neighbourContent.value + 0.5;
     }
   }
 
